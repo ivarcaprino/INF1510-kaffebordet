@@ -32,14 +32,15 @@ unsigned long debounce = 10;
 /*
 variabler
 */
-//booleans
-boolean etTrue = false;
-boolean brTrue = false;
-boolean meTrue = false;
-boolean stTrue = false;
-boolean beTrue = false;
-
 //tilstander til brytere
+int stateBrasil = 0;
+int lastBrasil = 0;
+int brasilTrykk = 0;
+int brasilPaa = 0;
+int stateEtiopia = 0;
+int lastEtiopia = 0;
+int etiopiaTrykk = 0;
+int etiopiaPaa = 0;
 int stateMelk = 0;
 int lastMelk = 0;
 int melkTrykk = 0;
@@ -72,89 +73,81 @@ void setup() {
 }
 
 void loop() {
-  if(digitalRead(swEn) == HIGH) { // brasil
-    brTrue = true;
-    etTrue = false;
-  }
-  if(digitalRead(swTo) == HIGH) { // etiopia
-    etTrue = true;
-    brTrue = false;
-  }
-  if(digitalRead(swTre) == HIGH) { // melk
-    meTrue = true;
-  }
-  if(digitalRead(swFire) == HIGH) { // stor
-    stTrue = true;
-  }
-  if(digitalRead(swFem) == HIGH) { // bestill
-    beTrue = true;
-  }
-  
-  //pga virkemaate for shiftregisteret maa funksjonen konstant kalles
-  //for aa holde alle leds lysende i displayet for karakteristikk for de forskjellige
-  //landene
-  //kaller derfor egne funksjoner for aa styre hva som horer til hvert land
-  if(brTrue){
-    brasil();
-  }
-  if(etTrue){
-    etiopia();
-  }
-  
-  //for aa gjore koden penere er funksjonene for tilvalg flyttet til egne funksjoner
-  if(meTrue){
-    melk();
-  }
-  if(stTrue){
-    stor();
-  }
-  if(beTrue){
-    bestill();
-  }
+  brasil();
+  etiopia();
+  melk();
+  stor();
+  bestill();
 }
 
 void brasil() {
-  //slaar av og paa lys i brytere	  
-  digitalWrite(brasilLys, HIGH);
-  digitalWrite(etiopiaLys, LOW);
-  //kaller funksjon for shiftregister til displayet
-  //i egen funksjon
-  shiftPin(0, HIGH);
-  shiftPin(1, HIGH);
-  shiftPin(2, HIGH);
-  shiftPin(3, HIGH);
-  shiftPin(4, HIGH);
-  shiftPin(5, HIGH);
-  shiftPin(6, LOW);
-  shiftPin(8, HIGH);
+  // bruker debounce og tilstandsendring på knappen for aa se om den er
+  // trykket flere ganger. slaar av/paa lys
+  brasilTrykk = digitalRead(swEn);
+  if(brasilTrykk != lastBrasil) {
+    time = millis();
+  }
+  if(millis() - time > debounce) {
+    if(brasilTrykk != stateBrasil) {
+      stateBrasil = brasilTrykk;
+      if(stateBrasil == HIGH){
+        brasilPaa = !brasilPaa;
+        //maa nullstille det andre landet
+        etiopiaPaa = 0;
+        digitalWrite(etiopiaLys, etiopiaPaa);
+      }
+    }
+  }
+  digitalWrite(brasilLys, brasilPaa);
+  //digitalWrite(etiopiaLys, etiopiaPaa);
+  lastBrasil = brasilTrykk;
+
+  //kaller funksjon til shiftregisteret
+  for(int i=0; i<=8; i++){
+    shiftPin(i, brasilPaa);
+  }
   shiftPin(9, LOW);
   shiftPin(10, LOW);
 }
 
 void etiopia() {
-  //slaar av og paa lys i brytere	  
-  digitalWrite(etiopiaLys, HIGH);
-  digitalWrite(brasilLys, LOW);
+  // bruker debounce og tilstandsendring på knappen for aa se om den er
+  // trykket flere ganger. slaar av/paa lys
+  etiopiaTrykk = digitalRead(swTo);
+  if(etiopiaTrykk != lastEtiopia) {
+    time = millis();
+  }
+  if(millis() - time > debounce) {
+    if(etiopiaTrykk != stateEtiopia) {
+      stateEtiopia = etiopiaTrykk;
+      if(stateEtiopia == HIGH){
+        etiopiaPaa = !etiopiaPaa;
+        //maa nullstille det andre landet
+        brasilPaa = 0;
+        digitalWrite(brasilLys, brasilPaa);
+      }
+    }
+  }
+  digitalWrite(etiopiaLys, etiopiaPaa);
+  lastEtiopia = etiopiaTrykk;
+
   //kaller funksjon for shiftregister til displayet
   //i egen funksjon
-  shiftPin(0, HIGH);
-  shiftPin(1, HIGH);
+  shiftPin(0, etiopiaPaa);
+  shiftPin(1, etiopiaPaa);
   shiftPin(2, LOW);
   shiftPin(3, LOW);
-  shiftPin(4, HIGH);
-  shiftPin(5, HIGH);
-  shiftPin(6, HIGH);
-  shiftPin(8, HIGH);
-  shiftPin(9, HIGH);
-  shiftPin(10, HIGH);
+  shiftPin(4, etiopiaPaa);
+  shiftPin(5, etiopiaPaa);
+  shiftPin(6, etiopiaPaa);
+  shiftPin(8, etiopiaPaa);
+  shiftPin(9, etiopiaPaa);
+  shiftPin(10, etiopiaPaa);
 }
 
 void melk() {
-  /*
-	koden folger standard oppsett for
-	a sla av/pa for hvert trykk med en unlatched bryter
-	bruker debounce og laststate for a se etter endringer
-  */
+  // bruker debounce og tilstandsendring på knappen for aa se om den er
+  // trykket flere ganger. slaar av/paa lys
   melkTrykk = digitalRead(swTre);
   if(melkTrykk != lastMelk) {
     time = millis();
@@ -172,11 +165,8 @@ void melk() {
 }
 
 void stor() {
-  /*
-	koden folger standard oppsett for
-	a sla av/pa for hvert trykk med en unlatched bryter
-	bruker debounce og laststate for a se etter endringer
-  */
+  // bruker debounce og tilstandsendring på knappen for aa se om den er
+  // trykket flere ganger. slaar av/paa lys
   storTrykk = digitalRead(swFire);
   if(storTrykk != lastStor) {
     time = millis();
@@ -200,34 +190,21 @@ void bestill() {
     digitalWrite(brasilLys, LOW);
     digitalWrite(etiopiaLys, LOW);
     digitalWrite(melkLys, LOW);
-	melkPaa=0;
     digitalWrite(storLys, LOW);
-	storPaa=0;
-    etTrue = false;
-    brTrue = false;
-    meTrue = false;
-    stTrue = false;
-    beTrue = false;
-    shiftPin(0, LOW);
-    shiftPin(1, LOW);
-    shiftPin(2, LOW);
-    shiftPin(3, LOW);
-    shiftPin(4, LOW);
-    shiftPin(5, LOW);
-    shiftPin(6, LOW);
-    shiftPin(7, LOW);
-    shiftPin(8, LOW);
-    shiftPin(9, LOW);
-    shiftPin(10, LOW);
-    shiftPin(11, LOW);
+    melkPaa=0;
+    storPaa=0;
+    etiopiaPaa=0;
+    brasilPaa=0;
+    for(int i=0; i<12; i++){
+      shiftPin(i, LOW);
+    }
 
-	//blinker bestillingsknapp 3 ganger
+	  //blinker bestillingsknapp 3 ganger
     for(int i = 0; i < 3; i++) {
       digitalWrite(bestillLys, HIGH);
       delay(200);
       digitalWrite(bestillLys, LOW);
       delay(200);
-
     }
   }
 }
@@ -241,16 +218,16 @@ void shiftPin(int pin, boolean state){
   // begynner write
   digitalWrite(latchPin, LOW);
 
-	/*  
+	/*
 	shiftregistere er daisychainet sammen
 	og pusher bytes ut videre ut av seg selv
 	saa lenge det kommer et nytt
 	man maa derfor sende til alle registere
-	i rekken hver gang man skal oppdatere 
-	
+	i rekken hver gang man skal oppdatere
+
 	pga dette er det kun siste pin man har oppdatert som holder seg high
-	*/ 
-  
+	*/
+
   for (int i = 0; i < antRegistere; i++) {
     // finn state for pin i register
     byte states = data[i];
